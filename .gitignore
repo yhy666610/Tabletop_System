@@ -1,0 +1,3 @@
+mdk/**
+!mdk/stm32f407.uvoptx
+!mdk/stm32f407.uvprojx
