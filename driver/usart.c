@@ -4,7 +4,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
-#include "stm32f4xx.h" // Device header
+#include "stm32f4xx.h"
 #include "usart.h"
 
 static SemaphoreHandle_t write_async_semaphore;
@@ -33,7 +33,7 @@ void usart_serial_init(void)
 	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
 	USART_Init(USART1, &USART_InitStructure);
-	USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);// 接收中断使能
+	USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
     USART_DMACmd(USART1, USART_DMAReq_Tx, ENABLE);
 	USART_Cmd(USART1, ENABLE);
 }
@@ -42,26 +42,25 @@ void usart_dma_init(void)
 {
     DMA_InitTypeDef DMA_InitStruct;
     DMA_StructInit(&DMA_InitStruct);
-    DMA_InitStruct.DMA_Channel = DMA_Channel_4; // 查参考手册得知USART1_TX对应DMA2的通道4
-    DMA_InitStruct.DMA_PeripheralBaseAddr = (uint32_t)&(USART1->DR); // 外设地址
-    DMA_InitStruct.DMA_DIR = DMA_DIR_MemoryToPeripheral; // 内存到外设
-    DMA_InitStruct.DMA_PeripheralInc = DMA_PeripheralInc_Disable; // 外设地址不变
-    DMA_InitStruct.DMA_MemoryInc = DMA_MemoryInc_Enable; // 内存地址递增
-    DMA_InitStruct.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte; // 外设数据大小:字节
-    DMA_InitStruct.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte; // 内存数据大小:字节
+    DMA_InitStruct.DMA_Channel = DMA_Channel_4;
+    DMA_InitStruct.DMA_PeripheralBaseAddr = (uint32_t)&(USART1->DR);
+    DMA_InitStruct.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+    DMA_InitStruct.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+    DMA_InitStruct.DMA_MemoryInc = DMA_MemoryInc_Enable;
+    DMA_InitStruct.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+    DMA_InitStruct.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
     DMA_InitStruct.DMA_Mode = DMA_Mode_Normal;
     DMA_InitStruct.DMA_Priority = DMA_Priority_Low;
-    DMA_InitStruct.DMA_FIFOMode = DMA_FIFOMode_Enable; // FIFO模式启用
-    DMA_InitStruct.DMA_FIFOThreshold = DMA_FIFOThreshold_Full; // FIFO满
-    DMA_InitStruct.DMA_MemoryBurst = DMA_MemoryBurst_INC8; // 内存突发传输:8个数据单元
-    DMA_InitStruct.DMA_PeripheralBurst = DMA_PeripheralBurst_Single; // 外设突发传输:单次
-    DMA_ITConfig(DMA2_Stream7, DMA_IT_TC, ENABLE); // 传输完成中断使能
-    DMA_Init(DMA2_Stream7, &DMA_InitStruct); // USART1_TX对应DMA2的Stream7
+    DMA_InitStruct.DMA_FIFOMode = DMA_FIFOMode_Enable;
+    DMA_InitStruct.DMA_FIFOThreshold = DMA_FIFOThreshold_Full;
+    DMA_InitStruct.DMA_MemoryBurst = DMA_MemoryBurst_INC8;
+    DMA_InitStruct.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+    DMA_ITConfig(DMA2_Stream7, DMA_IT_TC, ENABLE);
+    DMA_Init(DMA2_Stream7, &DMA_InitStruct);
 }
 
 void usart_interrupt_init(void)
 {
-    // USART RX中断设置
     NVIC_InitTypeDef NVIC_InitStructure;
     memset(&NVIC_InitStructure, 0, sizeof(NVIC_InitTypeDef));
     NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
@@ -70,7 +69,6 @@ void usart_interrupt_init(void)
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
     NVIC_SetPriority(USART1_IRQn, 5);
-    // DMA TC中断设置
     NVIC_InitStructure.NVIC_IRQChannel = DMA2_Stream7_IRQn;
     NVIC_Init(&NVIC_InitStructure);
     NVIC_SetPriority(DMA2_Stream7_IRQn, 5);
@@ -87,29 +85,26 @@ void usart_init(void)
     usart_interrupt_init();
 }
 
-void usart_write(USART_TypeDef *USARTx, char str[])
+void usart_write(const char str[])
 {
-	uint8_t len = strlen(str);
-
+	uint32_t len = strlen(str);
     do
     {
-        uint32_t chunk_size = (len < 65535) ? len : 65535; // 因为DMA的缓冲区大小限制，每次传输不超过65535个数据单元
-        len -= chunk_size; // 更新剩余数据单元数量
+        uint32_t chunk_size = (len < 65535) ? len : 65535;
+        len -= chunk_size;
 
-        DMA2_Stream7->NDTR = chunk_size; // 设置传输的数据单元数量
-        DMA2_Stream7->M0AR = (uint32_t)str; // 设置内存地址
+        DMA2_Stream7->NDTR = chunk_size;
+        DMA2_Stream7->M0AR = (uint32_t)str;
 
-        DMA_Cmd(DMA2_Stream7, ENABLE); // 启动DMA传输
+        DMA_Cmd(DMA2_Stream7, ENABLE);
 
-        xSemaphoreTake(write_async_semaphore, portMAX_DELAY); // 等待传输完成信号
-        // while (DMA_GetFlagStatus(DMA2_Stream7, DMA_FLAG_TCIF7) == RESET);   //等待DMA传输完成
-        // DMA_ClearFlag(DMA2_Stream7, DMA_FLAG_TCIF7); //清除传输完成标志
+        xSemaphoreTake(write_async_semaphore, portMAX_DELAY);
 
-        str += chunk_size; //每个数据单元1字节,执行这句的目的是更新data指针，指向下一个待传输的数据位置
+        str += chunk_size;
     } while (len > 0);
 
-    USART_ClearFlag(USARTx, USART_FLAG_TC);
-    while (USART_GetFlagStatus(USARTx, USART_FLAG_TC) == RESET);
+    USART_ClearFlag(USART1, USART_FLAG_TC);
+    while (USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET);
 }
 
 void DMA2_Stream7_IRQHandler(void)
@@ -117,8 +112,8 @@ void DMA2_Stream7_IRQHandler(void)
     if (DMA_GetITStatus(DMA2_Stream7, DMA_IT_TCIF7) != RESET)
     {
         BaseType_t pxHigherPriorityTaskWoken;
-        xSemaphoreGiveFromISR(write_async_semaphore, &pxHigherPriorityTaskWoken);   // 释放信号量，通知写入完成
-        portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);  // 如果需要切换任务，则进行切换
+        xSemaphoreGiveFromISR(write_async_semaphore, &pxHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
 
         DMA_ClearITPendingBit(DMA2_Stream7, DMA_IT_TCIF7);
     }
