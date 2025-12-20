@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include "stm32f4xx.h"
-void usart_write(const char str[]);
+void usart_write(const char str[], uint32_t size);
 void usart_init(void);
 
 #endif /* __USART_H__ */

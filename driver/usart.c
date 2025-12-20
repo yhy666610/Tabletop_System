@@ -85,9 +85,9 @@ void usart_init(void)
     usart_interrupt_init();
 }
 
-void usart_write(const char str[])
+void usart_write(const char str[], uint32_t size)
 {
-	uint32_t len = strlen(str);
+	uint32_t len = size;
     do
     {
         uint32_t chunk_size = (len < 65535) ? len : 65535;
