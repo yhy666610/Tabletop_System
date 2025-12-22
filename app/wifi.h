@@ -1,7 +1,7 @@
 #ifndef __WIFI_H__
 #define __WIFI_H__
 
-#define WIFI_SSID     "iQOO 11"
+#define WIFI_SSID     "iQOO 15"
 #define WIFI_PASSWORD "12346789"
 
 void wifi_init(void);
