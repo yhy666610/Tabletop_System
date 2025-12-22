@@ -7,7 +7,10 @@
 #include "semphr.h"
 #include "esp_at.h"
 
-#define ESP_AT_DEBUG 1
+#define LOG_TAG "ESP-AT"
+#define LOG_LVL ELOG_LVL_INFO
+#include "elog.h"
+
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 static bool esp_at_write_cmd(const char *cmd, uint32_t timeout);
@@ -202,20 +205,15 @@ static bool esp_at_wait_ready(uint32_t timeout)
 /* 发送AT命令并等待应答，返回是否成功 */
 static bool esp_at_write_cmd(const char *cmd, uint32_t timeout)
 {
-#if ESP_AT_DEBUG
-    printf("[DEBUG] Send: %s\n", cmd);
-#endif
+    log_d("[DEBUG] Send: %s", cmd);
 
 	esp_at_usart_write(cmd);
 	at_ack_t ack = esp_at_usart_wait_receive(timeout);
 
-#if ESP_AT_DEBUG
-	printf("[DEBUG] Response: \n%s\n", rxbuf);
-#endif
+	log_d("[DEBUG] Response: \n%s\n", rxbuf);
 
 	if (ack == AT_ACK_OK)
 		return true;
-
 	return false;
 }
 

@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include <stdio.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -7,6 +6,10 @@
 #include "ui.h"
 #include "font.h"
 #include "image.h"
+
+#define LOG_TAG "UI"
+#define LOG_LVL ELOG_LVL_INFO
+#include "elog.h"
 
 typedef enum
 {
@@ -71,14 +74,14 @@ static void ui_func(void *param)
                                     ui_msg.write_string.color,
                                     ui_msg.write_string.bg_color,
                                     ui_msg.write_string.font);
-                vPortFree((void *)ui_msg.write_string.str); // 释放字符串内存,避免内存泄漏
+                vPortFree((void *)ui_msg.write_string.str); // 释放字�?�串内存,避免内存泄漏
                 break;
             case UI_EVENT_DRAW_IMAGE:
                 st7789_draw_image(ui_msg.draw_image.x, ui_msg.draw_image.y,
                                   ui_msg.draw_image.image);
                 break;
             default:
-                printf("Unknown UI event: %d\n", ui_msg.event);
+                log_w("Unknown UI event: %d", ui_msg.event);
                 break;
         }
     }
@@ -86,7 +89,7 @@ static void ui_func(void *param)
 
 void ui_init(void)
 {
-    ui_queue = xQueueCreate(16, sizeof(ui_message_t));  //创建一个队列,最多容纳16个UI消息
+    ui_queue = xQueueCreate(16, sizeof(ui_message_t));  //创建一�?队列,最多�?�纳16个UI消息
     configASSERT(ui_queue);
     xTaskCreate(ui_func, "UI Task", 1024, NULL, tskIDLE_PRIORITY + 8, NULL);
 }
@@ -108,8 +111,8 @@ void ui_write_string(uint16_t x, uint16_t y, const char *str, uint16_t color, ui
     char *str_copy = pvPortMalloc(strlen(str) + 1);
     if (str_copy == NULL)
     {
-        printf("UI Write String: Memory allocation failed: %s\n", str_copy);
-        return; // 内存分配失败，直接返回,不发送消息,避免UI任务崩溃,会丢失这次字符串显示请求,但整个系统会继续运行
+        log_e("UI Write String: Memory allocation failed: %s", str_copy);
+        return; // 内存分配失败，直接返�?,不发送消�?,避免UI任务崩溃,会丢失这次字符串显示请求,但整�?系统会继�?运�??
     }
     strcpy(str_copy, str);
 

@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 #include "FreeRTOS.h"
 #include "task.h"
@@ -11,6 +10,10 @@
 #include "page.h"
 #include "app.h"
 #include "workqueue.h"
+
+#define LOG_TAG "APP"
+#define LOG_LVL ELOG_LVL_INFO
+#include "elog.h"
 
 #define WEATHER_URL "https://api.seniverse.com/v3/weather/now.json?key=S5uYc8UoqdGOUI1eq&location=WTW3SJ5ZBJUY&language=en&unit=c"
 //static const char *weather_url = "https://api.seniverse.com/v3/weather/now.json?key=S5uYc8UoqdGOUI1eq&location=WTW3SJ5ZBJUY&language=en&unit=c";
@@ -77,18 +80,18 @@ static void time_sync(void)
 
     if (!esp_at_get_time(&esp_time))
     {
-        printf("[SNTP] Get time failed\n");
+        log_e("[SNTP] Get time failed");
         restart_sync_delay = SECONDS(1); //延时1秒后重试
         goto err;
     }
 
     if (esp_time.year < 2000)
     {
-        printf("[SNTP] Invalid date received\n");
+        log_e("[SNTP] Invalid date received");
         restart_sync_delay = SECONDS(1);
         goto err;
     }
-    printf("[SNTP] Sync time: %04u-%02u-%02u %02u:%02u:%02u (%d)\n",
+    log_i("[SNTP] Sync time: %04u-%02u-%02u %02u:%02u:%02u (%d)",
            esp_time.year, esp_time.month, esp_time.day,
            esp_time.hour, esp_time.minute, esp_time.second, esp_time.weekday);
 
@@ -113,7 +116,7 @@ static void wifi_update(void)
     esp_wifi_info_t info = {0};
     if (!esp_at_get_wifi_info(&info))
     {
-        printf("[WIFI] WiFi info get failed\n");
+        log_e("[WIFI] WiFi info get failed");
         return;
     }
 
@@ -129,13 +132,13 @@ static void wifi_update(void)
 
     if (info.connected)
     {
-        printf("[WIFI] Connected to SSID: %s, BSSID: %s, Channel: %d, RSSI: %d\n",
+        log_i("[WIFI] Connected to SSID: %s, BSSID: %s, Channel: %d, RSSI: %d",
                info.ssid, info.bssid, info.channel, info.rssi);
         main_redraw_wifi_ssid(info.ssid);
     }
     else
     {
-        printf("[WIFI] Disconnected from %s\n", last_info.ssid);
+        log_w("[WIFI] Disconnected from %s", last_info.ssid);
         main_redraw_wifi_ssid("Wifi lost");
     }
 
@@ -170,13 +173,13 @@ static void inner_update(void)
 
     if (!aht20_start_measurement())
     {
-        printf("[AHT20] Start measurement failed\n");
+        log_e("[AHT20] Start measurement failed");
         return;
     }
 
     if (!aht20_wait_for_measurement())
     {
-        printf("[AHT20] Wait for measurement failed\n");
+        log_e("[AHT20] Wait for measurement failed");
         return;
     }
 
@@ -191,11 +194,11 @@ static void inner_update(void)
             last_temperature = temperature;
             last_humidity = humidity;
         }
-        printf("[AHT20] Temperature: %.2f C, Humidity: %.2f %%\n", temperature, humidity);
+        log_i("[AHT20] Temperature: %.2f C, Humidity: %.2f %%", temperature, humidity);
     }
     else
     {
-        printf("[AHT20] Read measurement failed\n");
+        log_e("[AHT20] Read measurement failed");
     }
 }
 //室外天气更新,每1分钟更新一次
@@ -210,16 +213,16 @@ static void outdoor_update(void)
     const char *weather_http_response = esp_at_http_get(weather_url);
     if (weather_http_response == NULL)
     {
-        printf("[HTTP] GET request failed\n");
+        log_e("[HTTP] GET request failed");
         return;
     }
     if (!parse_seniverse_response(weather_http_response, &weather_info))
     {
-        printf("[WEATHER] Parse response failed\n");
+        log_e("[WEATHER] Parse response failed");
         return;
 	}
 
-    printf("[WEATHER] %s, %s, %.1f C\n", weather_info.city, weather_info.weather, weather_info.temperature);
+    log_i("[WEATHER] %s, %s, %.1f C", weather_info.city, weather_info.weather, weather_info.temperature);
     if (memcmp(&last_weather, &weather_info, sizeof(weather_info_t)) != 0)
     {
         last_weather = weather_info;
