@@ -8,6 +8,7 @@
 #include "usart.h"
 
 static SemaphoreHandle_t write_async_semaphore;
+static SemaphoreHandle_t write_busy_locker;
 
 void usart_io_init(void)
 {
@@ -79,6 +80,9 @@ void usart_init(void)
     write_async_semaphore = xSemaphoreCreateBinary();
     configASSERT(write_async_semaphore);
 
+    write_busy_locker = xSemaphoreCreateMutex();
+    configASSERT(write_busy_locker);
+
     usart_io_init();
     usart_serial_init();
     usart_dma_init();
@@ -87,6 +91,8 @@ void usart_init(void)
 
 void usart_write(const char str[], uint32_t size)
 {
+    xSemaphoreTake(write_busy_locker, portMAX_DELAY);
+
 	uint32_t len = size;
     do
     {
@@ -105,6 +111,8 @@ void usart_write(const char str[], uint32_t size)
 
     USART_ClearFlag(USART1, USART_FLAG_TC);
     while (USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET);
+
+    xSemaphoreGive(write_busy_locker);
 }
 
 void DMA2_Stream7_IRQHandler(void)
