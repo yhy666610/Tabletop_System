@@ -4,6 +4,7 @@
             "name": "windows-gcc-x64",
             "includePath": [
                 "app",
+                "app/component",
                 "app/font",
                 "app/image",
                 "app/page",
@@ -13,7 +14,8 @@
                 "firmware/driver/inc",
                 "third_lib/freertos/include",
                 "third_lib/freertos/portable",
-                "third_lib/easylogger/inc"
+                "third_lib/easylogger/inc",
+                "third_lib/lettershell"
             ],
             "compilerPath": "D:/Program Files/arm-gnu-toolchain-14.3.rel1-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-gcc.exe",
             "cStandard": "c99",

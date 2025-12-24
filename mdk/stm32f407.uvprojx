@@ -326,8 +326,8 @@
             <uC99>1</uC99>
             <uGnu>1</uGnu>
             <useXO>0</useXO>
-            <v6Lang>3</v6Lang>
-            <v6LangP>3</v6LangP>
+            <v6Lang>1</v6Lang>
+            <v6LangP>1</v6LangP>
             <vShortEn>1</vShortEn>
             <vShortWch>1</vShortWch>
             <v6Lto>0</v6Lto>
@@ -335,9 +335,9 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>STM32F40_41xxx,USE_STDPERIPH_DRIVER,HSE_VALUE=8000000</Define>
+              <Define>STM32F40_41xxx,USE_STDPERIPH_DRIVER,HSE_VALUE=8000000,SHELL_CFG_USER=\"shell_cfg_user.h\"</Define>
               <Undefine></Undefine>
-              <IncludePath>..\driver;..\app\font;..\app\image;..\app\page;..\app;..\firmware\cmsis\core;..\firmware\cmsis\device;..\firmware\driver\inc;..\driver\stm32f4xx;..\third_lib\freertos\include;..\third_lib\freertos\portable;..\third_lib\easylogger\inc</IncludePath>
+              <IncludePath>..\app;..\app\component;..\app\font;..\app\image;..\app\page;..\driver;..\firmware\cmsis\core;..\firmware\cmsis\device;..\firmware\driver\inc;..\third_lib\freertos\include;..\third_lib\freertos\portable;..\third_lib\easylogger\inc;..\third_lib\lettershell</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -415,6 +415,26 @@
               <FileName>workqueue.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\app\workqueue.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>app/component</GroupName>
+          <Files>
+            <File>
+              <FileName>component.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\app\component\component.c</FilePath>
+            </File>
+            <File>
+              <FileName>shell_port.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\app\component\shell_port.c</FilePath>
+            </File>
+            <File>
+              <FileName>logger_init.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\app\component\logger_init.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -890,6 +910,31 @@
               <FileName>elog_utils.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\third_lib\easylogger\src\elog_utils.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>third_lib/lettershell</GroupName>
+          <Files>
+            <File>
+              <FileName>shell.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\third_lib\lettershell\shell.c</FilePath>
+            </File>
+            <File>
+              <FileName>shell_cmd_list.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\third_lib\lettershell\shell_cmd_list.c</FilePath>
+            </File>
+            <File>
+              <FileName>shell_companion.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\third_lib\lettershell\shell_companion.c</FilePath>
+            </File>
+            <File>
+              <FileName>shell_ext.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\third_lib\lettershell\shell_ext.c</FilePath>
             </File>
           </Files>
         </Group>

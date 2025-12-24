@@ -7,16 +7,16 @@
 #include "page.h"
 #include "ui.h"
 #include "workqueue.h"
+#include "component.h"
 
 extern void board_init(void);
 extern void board_lowlevel_init(void);
-extern void logger_init();
 
 static void main_init(void *param)
 {
     board_init();
 
-    logger_init();
+    component_init();
 
     ui_init();
 
