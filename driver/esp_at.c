@@ -46,6 +46,7 @@ static uint32_t rxlen;
 static const char *rxline;// 指向当前处理的行
 static at_ack_t rxack;
 static SemaphoreHandle_t at_ack_semaphore;
+static SemaphoreHandle_t at_busy_lock;
 
 static void esp_at_io_init(void)
 {
@@ -121,6 +122,9 @@ bool esp_at_init(void)
 {
     at_ack_semaphore = xSemaphoreCreateBinary();
     configASSERT(at_ack_semaphore);
+
+    at_busy_lock = xSemaphoreCreateMutex();
+    configASSERT(at_busy_lock);
 
 	esp_at_lowlevel_init();
 
@@ -205,12 +209,16 @@ static bool esp_at_wait_ready(uint32_t timeout)
 /* 发送AT命令并等待应答，返回是否成功 */
 static bool esp_at_write_cmd(const char *cmd, uint32_t timeout)
 {
+    xSemaphoreTake(at_busy_lock, portMAX_DELAY);
+
     log_d("[DEBUG] Send: %s", cmd);
 
 	esp_at_usart_write(cmd);
 	at_ack_t ack = esp_at_usart_wait_receive(timeout);
 
-	log_d("[DEBUG] Response: \n%s\n", rxbuf);
+	log_d("[DEBUG] Response: %s", rxbuf);
+
+    xSemaphoreGive(at_busy_lock);
 
 	if (ack == AT_ACK_OK)
 		return true;
