@@ -59,7 +59,7 @@ static void ui_func(void *param)
 
     while (1)
     {
-        xQueueReceive(ui_queue, &ui_msg, portMAX_DELAY);    // 鏃犳湡闄愮瓑寰呮帴鏀禪I娑堟伅
+        xQueueReceive(ui_queue, &ui_msg, portMAX_DELAY);
 
         switch (ui_msg.event)
         {
@@ -74,7 +74,7 @@ static void ui_func(void *param)
                                     ui_msg.write_string.color,
                                     ui_msg.write_string.bg_color,
                                     ui_msg.write_string.font);
-                vPortFree((void *)ui_msg.write_string.str); // 閲婃斁瀛楃?︿覆鍐呭瓨,閬垮厤鍐呭瓨娉勬紡
+                vPortFree((void *)ui_msg.write_string.str);
                 break;
             case UI_EVENT_DRAW_IMAGE:
                 st7789_draw_image(ui_msg.draw_image.x, ui_msg.draw_image.y,
@@ -89,7 +89,7 @@ static void ui_func(void *param)
 
 void ui_init(void)
 {
-    ui_queue = xQueueCreate(16, sizeof(ui_message_t));  //鍒涘缓涓�涓?闃熷垪,鏈�澶氬?圭撼16涓猆I娑堟伅
+    ui_queue = xQueueCreate(16, sizeof(ui_message_t));
     configASSERT(ui_queue);
     xTaskCreate(ui_func, "UI Task", 1024, NULL, tskIDLE_PRIORITY + 8, NULL);
 }
@@ -103,7 +103,7 @@ void ui_fill_color(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t 
     ui_msg.fill_color.height = y2;
     ui_msg.fill_color.color = color;
 
-    xQueueSend(ui_queue, &ui_msg, portMAX_DELAY); // 鏃犳湡闄愮瓑寰呭彂閫乁I娑堟伅
+    xQueueSend(ui_queue, &ui_msg, portMAX_DELAY);
 }
 
 void ui_write_string(uint16_t x, uint16_t y, const char *str, uint16_t color, uint16_t bg_color, const font_t *font)
@@ -112,7 +112,7 @@ void ui_write_string(uint16_t x, uint16_t y, const char *str, uint16_t color, ui
     if (str_copy == NULL)
     {
         log_e("UI Write String: Memory allocation failed: %s", str_copy);
-        return; // 鍐呭瓨鍒嗛厤澶辫触锛岀洿鎺ヨ繑鍥?,涓嶅彂閫佹秷鎭?,閬垮厤UI浠诲姟宕╂簝,浼氫涪澶辫繖娆″瓧绗︿覆鏄剧ず璇锋眰,浣嗘暣涓?绯荤粺浼氱户缁?杩愯??
+        return; //内存分配失败，直接return,不发送消息,避免UI任务崩溃,会丢失这次字符串显示请求,但整个系统会继续运行
     }
     strcpy(str_copy, str);
 
@@ -125,7 +125,7 @@ void ui_write_string(uint16_t x, uint16_t y, const char *str, uint16_t color, ui
     ui_msg.write_string.bg_color = bg_color;
     ui_msg.write_string.font = font;
 
-    xQueueSend(ui_queue, &ui_msg, portMAX_DELAY); // 鏃犳湡闄愮瓑寰呭彂閫乁I娑堟伅
+    xQueueSend(ui_queue, &ui_msg, portMAX_DELAY);
 }
 
 void ui_draw_image(uint16_t x, uint16_t y, const image_t *image)
@@ -136,5 +136,5 @@ void ui_draw_image(uint16_t x, uint16_t y, const image_t *image)
     ui_msg.draw_image.y = y;
     ui_msg.draw_image.image = image;
 
-    xQueueSend(ui_queue, &ui_msg, portMAX_DELAY); // 鏃犳湡闄愮瓑寰呭彂閫乁I娑堟伅
+    xQueueSend(ui_queue, &ui_msg, portMAX_DELAY);
 }
