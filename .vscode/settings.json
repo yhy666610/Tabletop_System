@@ -60,8 +60,9 @@
     "*.c": "c",
     "*.h": "c"
   },
-  "files.autoGuessEncoding": false,
+  "files.autoGuessEncoding": true,
   "files.encoding": "gb2312",
+  "files.defaultEncodingForNewFiles": "gb2312",
   "files.exclude": {
     "**/.git": true,
     "**/.svn": true,
