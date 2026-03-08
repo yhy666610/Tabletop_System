@@ -24,14 +24,18 @@ static void work_func(void *arg)
 
 void workqueue_init(void)
 {
-    work_msg_queue = xQueueCreate(16, sizeof(work_message_t));  //创建一个队列,最多容纳16个工作项
+    work_msg_queue = xQueueCreate(32, sizeof(work_message_t));  //创建一个队列,最多容纳32个工作项
     configASSERT(work_msg_queue);
-    xTaskCreate(work_func, "Workqueue Task", 1024, NULL, tskIDLE_PRIORITY + 5, NULL);
+    xTaskCreate(work_func, "Workqueue Task", 2048, NULL, tskIDLE_PRIORITY + 5, NULL);
 }
 
-void workqueue_run(work_t work, void *arg)
+bool workqueue_run(work_t work, void *arg)
 {
     configASSERT(work_msg_queue);
     work_message_t work_msg = {work, arg};
-    xQueueSend(work_msg_queue, &work_msg, portMAX_DELAY); // 无期限等待发送工作项到队列
+    if (xQueueSend(work_msg_queue, &work_msg, 0) != pdTRUE)
+    {
+        return false; // 队列满了,丢弃这次任务(工作项)
+    }
+    return true;
 }
