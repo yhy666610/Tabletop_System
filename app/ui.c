@@ -119,7 +119,10 @@ void ui_write_string(uint16_t x, uint16_t y, const char *str, uint16_t color, ui
     strncpy(ui_msg.write_string.str, str, sizeof(ui_msg.write_string.str) - 1);
     ui_msg.write_string.str[sizeof(ui_msg.write_string.str) - 1] = '\0'; // 确保字符串以空字符结尾,防止溢出
 
-    xQueueSend(ui_queue, &ui_msg, portMAX_DELAY);
+    if (xQueueSend(ui_queue, &ui_msg, pdMS_TO_TICKS(50)) != pdPASS)
+    {
+        log_w("UI queue full, drop: %s", str); // 如果UI队列满了,丢弃这次字符串更新,避免阻塞调用者,旧的字符串会继续显示,直到下一次更新
+    }
 }
 
 void ui_draw_image(uint16_t x, uint16_t y, const image_t *image)

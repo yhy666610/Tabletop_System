@@ -154,6 +154,16 @@ static void time_update(void)
     rtc_time_t rtc_time;
     rtc_get_time(&rtc_time);
 
+    if (rtc_time.year < 2020)
+    {
+        return;
+    }
+
+    if (rtc_time.second == last_time.second)
+    {
+        return;
+    }
+
     if (memcmp(&rtc_time, &last_time, sizeof(rtc_time_t)) == 0)
     {
         return;
@@ -255,6 +265,7 @@ static void app_timer_callback(TimerHandle_t xTimer)
     // app_job_t = (app_job_t)pvTimerGetTimerID(xTimer);
     // app_job_t();
 }
+
 void app_init(void)
 {
     time_update_timer = xTimerCreate("time_update_timer",
@@ -274,8 +285,6 @@ void app_init(void)
                                     pdTRUE,
                                     wifi_update,
                                     (TimerCallbackFunction_t)work_timer_callback);
-
-
 
     inner_update_timer = xTimerCreate("inner_update_timer",
                                      pdMS_TO_TICKS(INNER_UPDATE_INTERVAL),
