@@ -11,6 +11,8 @@
 #define LOG_LVL ELOG_LVL_INFO
 #include "elog.h"
 
+#define UI_STRING_MAX_LEN  32
+
 typedef enum
 {
     UI_EVENT_FILL_COLOR,
@@ -35,7 +37,7 @@ typedef struct
         {
             uint16_t x;
             uint16_t y;
-            const char *str;
+            char str[UI_STRING_MAX_LEN];
             uint16_t color;
             uint16_t bg_color;
             const font_t *font;
@@ -74,7 +76,6 @@ static void ui_func(void *param)
                                     ui_msg.write_string.color,
                                     ui_msg.write_string.bg_color,
                                     ui_msg.write_string.font);
-                vPortFree((void *)ui_msg.write_string.str);
                 break;
             case UI_EVENT_DRAW_IMAGE:
                 st7789_draw_image(ui_msg.draw_image.x, ui_msg.draw_image.y,
@@ -108,22 +109,15 @@ void ui_fill_color(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t 
 
 void ui_write_string(uint16_t x, uint16_t y, const char *str, uint16_t color, uint16_t bg_color, const font_t *font)
 {
-    char *str_copy = pvPortMalloc(strlen(str) + 1);
-    if (str_copy == NULL)
-    {
-        log_e("UI Write String: Memory allocation failed: %s", str_copy);
-        return; //内存分配失败，直接return,不发送消息,避免UI任务崩溃,会丢失这次字符串显示请求,但整个系统会继续运行
-    }
-    strcpy(str_copy, str);
-
     ui_message_t ui_msg;
     ui_msg.event = UI_EVENT_WRITE_STRING;
     ui_msg.write_string.x = x;
     ui_msg.write_string.y = y;
-    ui_msg.write_string.str = str_copy;
     ui_msg.write_string.color = color;
     ui_msg.write_string.bg_color = bg_color;
     ui_msg.write_string.font = font;
+    strncpy(ui_msg.write_string.str, str, sizeof(ui_msg.write_string.str) - 1);
+    ui_msg.write_string.str[sizeof(ui_msg.write_string.str) - 1] = '\0'; // 确保字符串以空字符结尾,防止溢出
 
     xQueueSend(ui_queue, &ui_msg, portMAX_DELAY);
 }
