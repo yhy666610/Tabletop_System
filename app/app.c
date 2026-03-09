@@ -10,6 +10,7 @@
 #include "page.h"
 #include "app.h"
 #include "workqueue.h"
+#include "wifi.h"
 
 #define LOG_TAG "APP"
 #define LOG_LVL ELOG_LVL_INFO
@@ -140,6 +141,8 @@ static void wifi_update(void)
     {
         log_w("[WIFI] Disconnected from %s", last_info.ssid);
         main_redraw_wifi_ssid("Wifi lost");
+
+        esp_at_connect_wifi(WIFI_SSID, WIFI_PASSWORD, NULL);
     }
 
     memcpy(&last_info, &info, sizeof(info));

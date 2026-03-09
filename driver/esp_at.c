@@ -226,6 +226,13 @@ static bool esp_at_write_cmd(const char *cmd, uint32_t timeout)
 
 	esp_at_usart_write(cmd);
 	at_ack_t ack = esp_at_usart_wait_receive(timeout);
+	// 如果模块忙，等待一段时间后重试，直到收到OK、ERROR或者超时
+	if (ack == AT_ACK_BUSY)
+	{
+		vTaskDelay(pdMS_TO_TICKS(500)); // 等待500ms后重试
+		esp_at_usart_write(cmd);
+		ack = esp_at_usart_wait_receive(timeout);
+	}
 
 	log_d("[DEBUG] Response: %s", rxbuf);
 
