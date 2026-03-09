@@ -42,6 +42,7 @@ static const at_ack_match_t at_ack_matches[] =
 };
 
 static char rxbuf[1024];
+static char txbuf[256];
 static uint32_t rxlen;
 static const char *rxline;// 指向当前处理的行
 static at_ack_t rxack;
@@ -142,10 +143,18 @@ static void esp_at_usart_write(const char *data)
 {
     uint32_t len = strlen(data);
 
+	DMA_Cmd(DMA1_Stream6, DISABLE);
+    while (DMA_GetCmdStatus(DMA1_Stream6) != DISABLE);
+
+	DMA_ClearFlag(DMA1_Stream6, DMA_FLAG_TCIF6 | DMA_FLAG_HTIF6 | DMA_FLAG_TEIF6 | DMA_FLAG_DMEIF6 | DMA_FLAG_FEIF6); // 清除所有相关标志位
+
     DMA1_Stream6->NDTR = len; // 设置传输的数据单元数量
     DMA1_Stream6->M0AR = (uint32_t)data; // 设置内存地址
-    DMA_ClearFlag(DMA1_Stream6, DMA_FLAG_TCIF6); // 清除传输完成标志
+
     DMA_Cmd(DMA1_Stream6, ENABLE); // 启动DMA传输
+
+	while (DMA_GetFlagStatus(DMA1_Stream6, DMA_FLAG_TCIF6) == RESET);
+    DMA_ClearFlag(DMA1_Stream6, DMA_FLAG_TCIF6);
 
 	// while (data && *data) // 发送字符串直到结束符
     // {
@@ -402,8 +411,7 @@ const char *esp_at_http_get(const char *url)
 	if (url == NULL)
 		return NULL;
 
-	char *txbuf = rxbuf;
-	snprintf(txbuf, sizeof(rxbuf), "AT+HTTPCLIENT=2,1,\"%s\",,,2\r\n", url);
+	snprintf(txbuf, sizeof(txbuf), "AT+HTTPCLIENT=2,1,\"%s\",,,2\r\n", url);
 	bool ret = esp_at_write_cmd(txbuf, 5000);
 	return ret ? esp_at_get_response() : NULL;
 }
