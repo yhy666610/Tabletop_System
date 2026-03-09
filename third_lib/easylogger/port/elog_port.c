@@ -27,7 +27,7 @@ ElogErrCode elog_port_init(void)
         printf("Error: EasyLogger mutex create failed!\r\n");
         goto err1;
     }
-    elog_semphr = xSemaphoreCreateBinary();
+    elog_semphr = xSemaphoreCreateCounting(32, 0); // 创建一个计数信号量，初始值为0，最大值为32
     if (elog_semphr == NULL)
     {
         printf("Error: EasyLogger semaphore create failed!\r\n");

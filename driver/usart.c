@@ -98,7 +98,12 @@ void usart_write(const char str[], uint32_t size)
     {
         uint32_t chunk_size = (len < 65535) ? len : 65535;
         len -= chunk_size;
-
+        
+        DMA_Cmd(DMA2_Stream7, DISABLE);
+        while (DMA_GetCmdStatus(DMA2_Stream7) != DISABLE);
+        
+        DMA_ClearFlag(DMA2_Stream7, DMA_FLAG_TCIF7 | DMA_FLAG_HTIF7 | DMA_FLAG_TEIF7 | DMA_FLAG_DMEIF7 | DMA_FLAG_FEIF7);
+        
         DMA2_Stream7->NDTR = chunk_size;
         DMA2_Stream7->M0AR = (uint32_t)str;
 
@@ -109,9 +114,6 @@ void usart_write(const char str[], uint32_t size)
         str += chunk_size;
     } while (len > 0);
 
-    USART_ClearFlag(USART1, USART_FLAG_TC);
-    while (USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET);
-
     xSemaphoreGive(write_busy_locker);
 }
 
@@ -119,10 +121,10 @@ void DMA2_Stream7_IRQHandler(void)
 {
     if (DMA_GetITStatus(DMA2_Stream7, DMA_IT_TCIF7) != RESET)
     {
+        DMA_ClearITPendingBit(DMA2_Stream7, DMA_IT_TCIF7);
+
         BaseType_t pxHigherPriorityTaskWoken;
         xSemaphoreGiveFromISR(write_async_semaphore, &pxHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
-
-        DMA_ClearITPendingBit(DMA2_Stream7, DMA_IT_TCIF7);
     }
 }
