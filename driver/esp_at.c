@@ -185,6 +185,8 @@ static at_ack_t esp_at_usart_wait_receive(uint32_t timeout)
 	rxlen = 0;
     rxline = rxbuf;
 
+	while(xSemaphoreTake(at_ack_semaphore, 0) == pdPASS); // 清空信号量,丢弃之前的应答,确保下面等待的是新的应答,避免之前的应答干扰当前的等待
+
     bool ack = xSemaphoreTake(at_ack_semaphore, pdMS_TO_TICKS(timeout)) == pdPASS;  // 等待应答信号
     return ack ? rxack : AT_ACK_NONE;
 	// const char *line = rxbuf;
