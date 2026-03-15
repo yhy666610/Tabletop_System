@@ -1,92 +1,106 @@
-#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
+#!/usr/bin/env python3
+# gen_magic_header.py - Generate a .xbin firmware package for IAP Bootloader
+# Header layout matches the device-side magic_header_t exactly.
 
+import argparse
 import os
+import struct
 import sys
-import time
 import zlib
 
-# typedef struct
-# {
-#     uint32_t magic;         // 魔数，用于标识这是一个有效的魔术头
-#     uint32_t bitmask;       // 位掩码，用于标识哪些字段有效
-#     uint32_t reserved1[6];  // 保留字段，供将来扩展使用
+MAGIC_HEADER_MAGIC    = 0x4D414749  # 'MAGI'
+DATA_TYPE_APP         = 0           # MAGIC_HEADER_TYPE_APP
+MAGIC_HEADER_SIZE     = 256
+MAGIC_HEADER_CRC_SIZE = 252         # CRC covers bytes 0..251
 
-#     uint32_t data_type;     // 类型，根据type类型选择固件下载位置
-#     uint32_t data_offset;   // 固件文件相对于magic header的偏移
-#     uint32_t data_address;  // 固件写入的实际地址
-#     uint32_t data_length;   // 固件长度
-#     uint32_t data_crc32;    // 固件的CRC32校验值
-#     uint32_t reserved2[11]; // 保留字段，供将来扩展使用
+DEFAULT_HEADER_ADDR = 0x0800C000
+DEFAULT_APP_ADDR    = 0x08010000
 
-#     char version[128];      // 固件版本字符串
+def crc32(data: bytes) -> int:
+    return zlib.crc32(data) & 0xFFFFFFFF
 
-#     uint32_t reserved3[6];  // 保留字段，供将来扩展使用
-#     uint32_t this_address;  // 该结构体在存储介质中的实际地址
-#     uint32_t this_crc32;    // 该结构体本身的CRC32校验值
-# } magic_header_t;
+def build_magic_header(app_bin: bytes, version: str, header_addr: int, app_addr: int) -> bytes:
+    data_length = len(app_bin)
+    data_crc32  = crc32(app_bin)
+    data_offset = MAGIC_HEADER_SIZE  # app binary starts right after the header
 
-MAGIC_HEADER_MAGIC = 0x4D414749  # 'MAGI' in ASCII
-DATA_TYPE_FIRMWARE = 1
-BL_VERSION_MAJOR = 1
-BL_VERSION_MINOR = 0
-BL_VERSION_PATCH = 0
-BL_VERSION_EXTRA = "alpha"
+    ver_bytes = version.encode("ascii", errors="ignore")[:127]
+    ver_field = ver_bytes + b"\x00" * (128 - len(ver_bytes))
 
-def main():
-    project_root = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
+    reserved1 = [0] * 6
+    reserved2 = [0] * 11
+    reserved3 = [0] * 6
+    bitmask   = 0
 
-    if len(sys.argv) < 2:
-        print("Usage: gen_magic_header.py <input_file>")
+    prefix = (
+        struct.pack("<I", MAGIC_HEADER_MAGIC)   # magic @0
+        + struct.pack("<I", bitmask)            # bitmask @4
+        + struct.pack("<6I", *reserved1)        # reserved1[6] @8
+        + struct.pack("<I", DATA_TYPE_APP)      # data_type @32
+        + struct.pack("<I", data_offset)        # data_offset @36
+        + struct.pack("<I", app_addr)           # data_address @40
+        + struct.pack("<I", data_length)        # data_length @44
+        + struct.pack("<I", data_crc32)         # data_crc32 @48
+        + struct.pack("<11I", *reserved2)       # reserved2[11] @52
+        + ver_field                             # version[128] @96
+        + struct.pack("<6I", *reserved3)        # reserved3[6] @224
+        + struct.pack("<I", header_addr)        # this_address @248
+    )
+
+    assert len(prefix) == MAGIC_HEADER_CRC_SIZE, f"prefix len {len(prefix)} != {MAGIC_HEADER_CRC_SIZE}"
+    this_crc32 = crc32(prefix)
+    header = prefix + struct.pack("<I", this_crc32)  # this_crc32 @252
+
+    assert len(header) == MAGIC_HEADER_SIZE, f"header len {len(header)} != {MAGIC_HEADER_SIZE}"
+    return header
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        prog="gen_magic_header.py",
+        description="Generate a .xbin firmware package for IAP Bootloader (header matches device layout)",
+    )
+    parser.add_argument("input", metavar="INPUT.bin",
+                        help="Input raw application binary (.bin)")
+    parser.add_argument("--version", default="v1.0.0",
+                        help="Firmware version string (default: v1.0.0)")
+    parser.add_argument("--app-address", metavar="ADDR", type=lambda x: int(x, 0),
+                        default=DEFAULT_APP_ADDR,
+                        help=f"Flash address where the app binary is programmed (default: 0x{DEFAULT_APP_ADDR:08X})")
+    parser.add_argument("--header-address", metavar="ADDR", type=lambda x: int(x, 0),
+                        default=DEFAULT_HEADER_ADDR,
+                        help=f"Flash address where the magic header is programmed (default: 0x{DEFAULT_HEADER_ADDR:08X})")
+    parser.add_argument("-o", "--output", metavar="OUTPUT.xbin",
+                        help="Output file path (default: INPUT with .xbin extension)")
+    parser.add_argument("axf", metavar="INPUT.axf", nargs="?", default=None,
+                        help="Optional ELF/AXF file (ignored, for Keil compatibility)")
+    args = parser.parse_args()
+
+    if not os.path.isfile(args.input):
+        print(f"ERROR: input file not found: {args.input}", file=sys.stderr)
         sys.exit(1)
 
-    binfile = os.path.realpath(sys.argv[1])
-    if not os.path.isfile(binfile):
-        print(f"Error: File '{binfile}' does not exist.")
+    with open(args.input, "rb") as fh:
+        app_bin = fh.read()
+    if not app_bin:
+        print("ERROR: input file is empty", file=sys.stderr)
         sys.exit(1)
 
-    with open(binfile, "rb") as f:
-        bin_data = f.read()
-    bin_crc = zlib.crc32(bin_data) & 0xFFFFFFFF  # 计算CRC32校验值
+    output_path = args.output or (os.path.splitext(args.input)[0] + ".xbin")
 
-    # 构建magic header
-    header = []
+    header = build_magic_header(app_bin, args.version, args.header_address, args.app_address)
+    xbin = header + app_bin
 
-    header.append((MAGIC_HEADER_MAGIC).to_bytes(4, byteorder='little'))  # magic
-    header.append((0).to_bytes(4, byteorder='little'))  # bitmask
-    header.append((0).to_bytes(4 * 6, byteorder='little'))  # reserved1
+    with open(output_path, "wb") as fh:
+        fh.write(xbin)
 
-    header.append((DATA_TYPE_FIRMWARE).to_bytes(4, byteorder='little'))  # data_type
-    header.append((4096).to_bytes(4, byteorder='little'))  # data_offset
-    header.append((0x08010000).to_bytes(4, byteorder='little'))  # data_address
-    header.append((len(bin_data)).to_bytes(4, byteorder='little'))  # data_length
-    header.append((bin_crc).to_bytes(4, byteorder='little'))  # data_crc32
-    header.append((0).to_bytes(4 * 11, byteorder='little'))  # reserved2
-
-    version_date = time.strftime("%y%m%d", time.localtime())
-    version_time = time.strftime("%H%M", time.localtime())
-    version_str = f"v{BL_VERSION_MAJOR}.{BL_VERSION_MINOR}.{BL_VERSION_PATCH}-{version_date}-{version_time}-{BL_VERSION_EXTRA}"
-    version_bytes = version_str.encode('ascii')
-    version_bytes = version_bytes.ljust(128, b'\x00')
-    header.append(version_bytes)  # version
-
-    header.append((0).to_bytes(4 * 6, byteorder='little'))  # reserved3
-    header.append((0x0800C000).to_bytes(4, byteorder='little'))  # this_address
-
-    this_crc = zlib.crc32(b''.join(header)) & 0xFFFFFFFF  # 计算当前结构体的CRC32校验值
-    header.append((this_crc).to_bytes(4, byteorder='little'))  # this_crc32
-
-    magic_header = b''.join(header)
-    magic_header = magic_header.ljust(4096, b'\x00')  # 填充到 4096 字节
-
-    # 生成带有魔术头的二进制文件
-    upgrade_filename = os.path.splitext(os.path.basename(binfile))[0] + "_upgrade.xbin"
-    output_path = os.path.join(project_root, "build", upgrade_filename)
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, "wb") as f:
-        f.write(b''.join([magic_header, bin_data]))# Write magic header and binary data to output file
-    print(f"Generated upgrade file: {output_path}")
-
+    print(f"Output        : {output_path}  ({len(xbin)} bytes)")
+    print(f"Header addr   : 0x{args.header_address:08X}")
+    print(f"Header CRC32  : 0x{crc32(header[:MAGIC_HEADER_CRC_SIZE]):08X}")
+    print(f"App addr      : 0x{args.app_address:08X}")
+    print(f"App size      : {len(app_bin)} bytes ({len(app_bin)/1024:.2f} KB)")
+    print(f"App CRC32     : 0x{crc32(app_bin):08X}")
+    print(f"Version       : {args.version}")
 
 if __name__ == "__main__":
     main()
