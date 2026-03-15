@@ -1,3 +1,4 @@
+.editorconfig
 mdk/**
 !mdk/stm32f407.uvprojx
 build/
