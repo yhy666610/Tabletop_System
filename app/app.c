@@ -306,7 +306,7 @@ void app_init(void)
     workqueue_run(app_work, inner_update); //启动时立即更新内部传感器
     workqueue_run(app_work, outdoor_update); //启动时立即更新室外天气
 
-    //以下代码可选，因为定时器已经设置为自动重载，xTimerCreate时传入pdTRUE即可
+    // 启动定时器
     xTimerStart(time_update_timer, 0);
     xTimerStart(time_sync_timer, 0);
     xTimerStart(wifi_update_timer, 0);
