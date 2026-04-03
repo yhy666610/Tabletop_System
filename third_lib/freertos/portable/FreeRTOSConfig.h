@@ -47,9 +47,21 @@ extern uint32_t SystemCoreClock;
 #define configUSE_SB_COMPLETED_CALLBACK                     0
 
 /* Run time and task stats gathering related definitions. */
-#define configGENERATE_RUN_TIME_STATS                       0
-#define configUSE_TRACE_FACILITY                            0
-#define configUSE_STATS_FORMATTING_FUNCTIONS                0
+#define configGENERATE_RUN_TIME_STATS                       1
+#define configUSE_TRACE_FACILITY                            1
+#define configUSE_STATS_FORMATTING_FUNCTIONS                1
+
+/* Use the Cortex-M4 DWT cycle counter as the run-time stats time base.
+ * DWT->CYCCNT increments at the CPU clock frequency (~168 MHz), which is
+ * orders of magnitude faster than the 1 kHz FreeRTOS tick ¡ª well within
+ * the "10x faster" requirement.  No extra peripheral is needed; TIM6 is
+ * left exclusively for tim_delay. */
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() do {           \
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;            \
+    DWT->CYCCNT      = 0U;                                      \
+    DWT->CTRL       |= DWT_CTRL_CYCCNTENA_Msk;                 \
+} while(0)
+#define portGET_RUN_TIME_COUNTER_VALUE()    (DWT->CYCCNT)
 
 /* Co-routine related definitions. */
 #define configUSE_CO_ROUTINES                               0

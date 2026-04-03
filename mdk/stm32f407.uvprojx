@@ -371,7 +371,7 @@
             <ScatterFile></ScatterFile>
             <IncludeLibs></IncludeLibs>
             <IncludeLibsPath></IncludeLibsPath>
-            <Misc></Misc>
+            <Misc>--keep shellCommand*</Misc>
             <LinkerInputFile></LinkerInputFile>
             <DisabledWarnings></DisabledWarnings>
           </LDads>
@@ -435,6 +435,41 @@
               <FileName>logger_init.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\app\component\logger_init.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>app/commands</GroupName>
+          <Files>
+            <File>
+              <FileName>os_info.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\app\commands\os_info.c</FilePath>
+            </File>
+            <File>
+              <FileName>add.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\app\commands\add.c</FilePath>
+            </File>
+            <File>
+              <FileName>helloword.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\app\commands\helloword.c</FilePath>
+            </File>
+            <File>
+              <FileName>mock_net.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\app\commands\mock_net.c</FilePath>
+            </File>
+            <File>
+              <FileName>mock_weather.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\app\commands\mock_weather.c</FilePath>
+            </File>
+            <File>
+              <FileName>ui_str_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\app\commands\ui_str_test.c</FilePath>
             </File>
           </Files>
         </Group>

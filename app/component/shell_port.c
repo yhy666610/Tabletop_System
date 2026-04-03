@@ -12,9 +12,14 @@ static signed short shell_write(char *buffer, unsigned short size)
     return size;
 }
 
+static signed short shell_read(char *data, unsigned short len)
+{
+    return usart_read(data, len);
+}
+
 void shell_init(void)
 {
-    shell.read = NULL;
+    shell.read = shell_read;
     shell.write = shell_write;
     shellInit(&shell, shell_buffer, 512);
 

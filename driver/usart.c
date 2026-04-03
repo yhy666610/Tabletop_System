@@ -9,6 +9,7 @@
 
 static SemaphoreHandle_t write_async_semaphore;
 static SemaphoreHandle_t write_busy_locker;
+static QueueHandle_t     rx_queue;
 
 void usart_io_init(void)
 {
@@ -83,6 +84,9 @@ void usart_init(void)
     write_busy_locker = xSemaphoreCreateMutex();
     configASSERT(write_busy_locker);
 
+    rx_queue = xQueueCreate(64, sizeof(char));
+    configASSERT(rx_queue);
+
     usart_io_init();
     usart_serial_init();
     usart_dma_init();
@@ -98,12 +102,12 @@ void usart_write(const char str[], uint32_t size)
     {
         uint32_t chunk_size = (len < 65535) ? len : 65535;
         len -= chunk_size;
-        
+
         DMA_Cmd(DMA2_Stream7, DISABLE);
         while (DMA_GetCmdStatus(DMA2_Stream7) != DISABLE);
-        
+
         DMA_ClearFlag(DMA2_Stream7, DMA_FLAG_TCIF7 | DMA_FLAG_HTIF7 | DMA_FLAG_TEIF7 | DMA_FLAG_DMEIF7 | DMA_FLAG_FEIF7);
-        
+
         DMA2_Stream7->NDTR = chunk_size;
         DMA2_Stream7->M0AR = (uint32_t)str;
 
@@ -127,4 +131,36 @@ void DMA2_Stream7_IRQHandler(void)
         xSemaphoreGiveFromISR(write_async_semaphore, &pxHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
     }
+}
+
+void USART1_IRQHandler(void)
+{
+    if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
+    {
+        char ch = (char)USART_ReceiveData(USART1);
+        BaseType_t pxHigherPriorityTaskWoken = pdFALSE;
+        /* If the queue is full the incoming byte is discarded.  This is
+         * acceptable for interactive keyboard input because the shell
+         * processes each character before the next keystroke arrives. */
+        xQueueSendFromISR(rx_queue, &ch, &pxHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(pxHigherPriorityTaskWoken);
+    }
+}
+
+signed short usart_read(char *data, unsigned short len)
+{
+    unsigned short received = 0;
+    while (received < len)
+    {
+        /* portMAX_DELAY: blocks forever until a byte is available;
+         * xQueueReceive always returns pdTRUE in this case. */
+        xQueueReceive(rx_queue, &data[received], portMAX_DELAY);
+        received++;
+    }
+    return (signed short)received;
+}
+
+signed short usart_try_read(char *data)
+{
+    return (xQueueReceive(rx_queue, data, 0) == pdTRUE) ? 1 : 0;
 }
