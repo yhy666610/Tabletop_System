@@ -71,7 +71,7 @@ extern uint32_t SystemCoreClock;
 #define configUSE_TIMERS                                    1
 #define configTIMER_TASK_PRIORITY                           (configMAX_PRIORITIES - 1)
 #define configTIMER_QUEUE_LENGTH                            32
-#define configTIMER_TASK_STACK_DEPTH                        configMINIMAL_STACK_SIZE
+#define configTIMER_TASK_STACK_DEPTH                        256
 
 /* Interrupt nesting behaviour configuration. */
 #define configPRIO_BITS                         4

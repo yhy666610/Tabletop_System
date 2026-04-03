@@ -23,5 +23,5 @@ void shell_init(void)
     shell.write = shell_write;
     shellInit(&shell, shell_buffer, 512);
 
-    xTaskCreate(shellTask, "Shell", 1024, &shell, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(shellTask, "Shell", 512, &shell, tskIDLE_PRIORITY + 1, NULL);
 }

@@ -26,7 +26,7 @@ void workqueue_init(void)
 {
     work_msg_queue = xQueueCreate(32, sizeof(work_message_t));  //创建一个队列,最多容纳32个工作项
     configASSERT(work_msg_queue);
-    xTaskCreate(work_func, "Workqueue Task", 2048, NULL, tskIDLE_PRIORITY + 5, NULL);
+    xTaskCreate(work_func, "Workqueue Task", 512, NULL, tskIDLE_PRIORITY + 5, NULL);
 }
 
 bool workqueue_run(work_t work, void *arg)
